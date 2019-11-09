@@ -33,27 +33,9 @@
         <script src="/js/postprocessing/ShaderPass.js"></script>
     </head>
     <body>
-        
-        <!-- Overlay -->
-        <div id="overlay">
-
-            <!-- Loading! -->
-            <div id="loader" style="display: none;">
-                <img src="textures/loader.gif">
-                <h2>Loading <span style="color: #F5C715;">Coins</span>.js</h2>
-            </div>
-
-            <div id="coin-slot" onclick="createCoin(randomRange(-40,40),randomRange(80,100),randomRange(-20,-100));">
-                <img src="textures/coin_slot.png">
-            </div>
-
-        </div>
 
         <!-- Container for game -->
-        <div id="viewport"></div>
+        <iframe width="640" height="480" src="index.html"></iframe>
 
-        <!-- Coins.js -->
-        <script type="text/javascript" src="/js/game.js"></script>
-        
     </body>
 </html>

@@ -11,8 +11,8 @@
 // three.js
 var container, renderer, scene, camera, loader, audioLoader, listener;
 
-// Postprocessing
-var postProcessing, composer;
+// Settings
+var ambienceEnabled, sfxEnabled, postProcessing, composer;
 
 // Delta time
 var deltaTime, clock = new THREE.Clock();
@@ -21,15 +21,15 @@ var deltaTime, clock = new THREE.Clock();
 var stats, showStats, showGUI, gui = null;
 
 // Coins.js
-var cabinet, shelf;
+var cabinet, shelf, coin;
 var pusher, pusherStep = 0, pusherIn = false;
-var coinSFX,sfxEnabled=false;
+var coinSFX1, coinSFX2, coinSFX3, coinSFX=[], sfxEnabled=false;
 
 // Resize game to fit browser window
 window.addEventListener('resize', onWindowResize, false);
 
 // Key press
-document.addEventListener('keydown',onKeyDown,false);
+document.addEventListener('keydown', onKeyDown, false);
 
 // Start game
 window.onload = init();
@@ -41,10 +41,12 @@ window.onload = init();
  */
 function init() {
     
-    // Settings
+    // Default settings
+    ambienceEnabled = true; // Play arcade ambience
+    sfxEnabled = true; // Play coin sound effects
     postProcessing = true; // Enable post processing
     container = 'viewport'; // The ID of element to project game
-    showStats = true; // Show performance statistics
+    showStats = false; // Show performance statistics
     showGUI = false; // Show GUI controls
     
     // Renderer
@@ -234,30 +236,22 @@ function initScene() {
     // Panorama background
     initPanorama('/textures/arcade.jpg');
     
-    // Initialize coin cabinet
-    initCabinet();
+    // Initialize
+    initModels();
     
     // Lights
     initLights();
     
-    // Arcade ambience
-    var arcadeAmb = new THREE.Audio( listener );
-    audioLoader.load( 'sfx/arcade.mp3', function( buffer ) {
-        arcadeAmb.setBuffer( buffer );
-	arcadeAmb.setLoop(true);
-	arcadeAmb.setVolume(0.5);
-	arcadeAmb.play();
-    });
-    
-    // Coin sounds
-    coinSFX = [
-        'sfx/coinClash1.wav',
-        'sfx/coinClash2.wav',
-        'sfx/coinClash3.wav'
-    ];
+    // Audio
+    initAudio();
+
+    // Populate pusher
+    for ( var i = 0; i < 10; i++ ) {
+        createCoin(randomRange(-40,40),randomRange(50,60), randomRange(-80,-100));
+    }
     
     // Populate with coins
-    for ( var i = 0; i < 50; i++ ) {
+    for ( var i = 0; i < 30; i++ ) {
         
         createCoin(randomRange(-40,40),randomRange(0,50),randomRange(20,50));
         
@@ -288,7 +282,11 @@ function animate() {
  * @returns {void}
  */
 function onKeyDown() {
+
+    // Hands off the keyboard, Firefox!
+    event.preventDefault();
     
+    // Create a coin!
     createCoin(randomRange(-40,40),randomRange(80,100),randomRange(-20,-100));
     
 }
@@ -321,7 +319,7 @@ function initPanorama(imagePath) {
  * 
  * @returns {void}
  */
-function initCabinet() {
+function initModels() {
     
     // Cabinet model
     loader.load('models/cabinet.json', function (geometry, materials) {
@@ -344,28 +342,64 @@ function initCabinet() {
     });
     
     // Shelf
-    var geo = new THREE.BoxBufferGeometry(104,200,188);
+    var geo = new THREE.BoxBufferGeometry(104,201,500);
     var mat = new THREE.MeshPhongMaterial({ 
         color: 0xc1c1c1,
         specular: 0x111111,
         shininess: 10
     });
+    var friction = 1; // high friction
+    var restitution = 0; // low restitution
+    var material = Physijs.createMaterial(mat, friction, restitution);
     
-    shelf = new Physijs.BoxMesh(geo, mat, 0);
-    shelf.position.set(0,-100,-18.5);
+    shelf = new Physijs.BoxMesh(geo, material, 0);
+    shelf.position.set(0,-99,-180);
     
     scene.add(shelf);
+
+    // Wall material
+    var mat = new THREE.MeshLambertMaterial({ 
+        color: 0xc1c1c1,
+        wireframe: false,
+        transparent: true,
+        opacity: 0
+    });
+
+    // Wall left
+    var geometry = new THREE.BoxGeometry(10, 20, 200);
+    var cube = new Physijs.BoxMesh( geometry, mat, 0);
+    cube.position.set(-57,4,-220);
+    scene.add( cube );
+
+    // Wall right
+    var cube = new Physijs.BoxMesh( geometry, mat, 0);
+    cube.position.set(57,4,-220);
+    scene.add( cube );
+
+    // Wall stopper
+    var cube = new Physijs.BoxMesh( geometry, mat, 0);
+    cube.position.set(0,4,-320);
+    scene.add( cube );
+
+    // Wall backboard
+    var geometry = new THREE.BoxGeometry(110, 100, 10);
+    var cube = new Physijs.BoxMesh( geometry, mat, 0);
+    cube.position.set(0,80,-115);
+    scene.add( cube );
     
     // Pusher
-    var geo = new THREE.BoxBufferGeometry(103,50,160);
+    var geo = new THREE.BoxBufferGeometry(103,28,160);
     var mat = new THREE.MeshPhongMaterial({ 
         color: 0xd8c497,
         specular: 0x111111,
         shininess: 10
     });
+    var friction = 1;
+    var restitution = 0;
+    var material = Physijs.createMaterial(mat, friction, restitution);
     
-    pusher = new Physijs.BoxMesh(geo, mat, 0);
-    pusher.position.set(0,4,-192);
+    pusher = new Physijs.BoxMesh(geo, material, 10000000);
+    pusher.position.set(0,16,-150);
     
     scene.add(pusher);
     
@@ -390,6 +424,37 @@ function initLights() {
 }
 
 /**
+ * Initializes the audio for the game.
+ * 
+ * @returns {void}
+ */
+function initAudio() {
+
+    // Arcade ambience
+    var arcadeAmb = new THREE.Audio( listener );
+    audioLoader.load( 'sfx/arcade.mp3', function( buffer ) {
+        arcadeAmb.setBuffer( buffer );
+        arcadeAmb.setLoop(true);
+        arcadeAmb.setVolume(0.5);
+        if (ambienceEnabled) {
+            arcadeAmb.play();
+        }
+    });
+    
+    // Coin sounds
+    audioLoader.load('sfx/coinClash1.wav', function( buffer ) {
+        coinSFX.push(buffer);
+    });
+    audioLoader.load('sfx/coinClash2.wav', function( buffer ) {
+        coinSFX.push(buffer);
+    });
+    audioLoader.load('sfx/coinClash3.wav', function( buffer ) {
+        coinSFX.push(buffer);
+    });
+
+}
+
+/**
  * Instantiates a new coin.
  * 
  * @param {number} posX
@@ -403,8 +468,8 @@ function createCoin(posX=0,posY=0,posZ=0) {
     loader.load('models/coin.json', function (geometry, materials) {
 
         var mass = 1;
-        var friction = 0.2; // high friction
-        var restitution = 0.3; // low restitution
+        var friction = .4;
+        var restitution = .2; 
 
         // Create mesh for model
         var material = Physijs.createMaterial( 
@@ -422,6 +487,11 @@ function createCoin(posX=0,posY=0,posZ=0) {
 
         // Add to scene
         scene.add(coin);
+
+        // Damping
+        //var linear_amount = 0.6;
+        //var angular_amount = 0;
+        //coin.setDamping( linear_amount, angular_amount );
         
         // Collisions
         coin.addEventListener( 'collision', function(object, rel_vol){
@@ -434,13 +504,12 @@ function createCoin(posX=0,posY=0,posZ=0) {
 
                 if (volx > 10 || voly > 10 || volz > 10) {
 
-                    var coinSound = new THREE.PositionalAudio( listener );
-                    audioLoader.load( coinSFX[Math.floor(coinSFX.length * Math.random())], function( buffer ) {
-                            coinSound.setBuffer( buffer );
-                            coinSound.setRefDistance( 20 );
-                            coinSound.play();
-                    });
-                    coin.add( coinSound );
+                    // Play sound
+                    var r = Math.floor(Math.random() * 3);
+                    var sound = new THREE.Audio( listener );
+                    sound.setBuffer(coinSFX[Math.floor(coinSFX.length * Math.random())]);
+                    sound.setVolume(0.2);
+                    sound.play();
 
                 }
                 
@@ -459,27 +528,24 @@ function createCoin(posX=0,posY=0,posZ=0) {
  */
 function movePusher() {
     
-    var speed = 1.5;
-    var delay = 150;
+    var delay = 70;
+    pusherStep += (deltaTime * 25);
     
     // Inwards
-    if (pusherIn && pusher.position.z < -70) {
-        pusher.position.z += speed;
+    if (pusherIn) {
+        pusher.setLinearVelocity(new THREE.Vector3(0, 0, -pusherStep*2));
     }
 
     // Outwards
-    if (!pusherIn && pusher.position.z > -192) {
-        pusher.position.z -= speed;
+    if (!pusherIn) {
+        pusher.setLinearVelocity(new THREE.Vector3(0, 0, pusherStep));
     }
-
-    pusher.__dirtyPosition = true;
-    
-    pusherStep ++;
     
     if (pusherStep > delay) {
         
-        pusherIn = !pusherIn;
         pusherStep = 0;
+        pusher.setLinearVelocity(new THREE.Vector3(0, 0, 0));
+        pusherIn = !pusherIn;
         
     }
     
