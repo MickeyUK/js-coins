@@ -23,7 +23,7 @@ var stats, showStats, showGUI, gui = null;
 // Coins.js
 var cabinet, shelf, coin;
 var pusher, pusherStep = 0, pusherIn = false;
-var coinSFX1, coinSFX2, coinSFX3, coinSFX=[], sfxEnabled=false;
+var coinSFX1, coinSFX2, coinSFX3, coinSFX=[], enableSound=false;
 
 // Resize game to fit browser window
 window.addEventListener('resize', onWindowResize, false);
@@ -259,7 +259,7 @@ function initScene() {
     
     // Delay for sound effects
     setTimeout(function(){
-        sfxEnabled = true;
+        enableSound = true;
     },3000);
     
 }
@@ -273,6 +273,13 @@ function animate() {
     
     // Move pusher back and forth
     movePusher();
+
+    // Restrict pusher movement
+    var pos = pusher.position.z;
+    console.log(pos);
+    if ((!pusherIn && pos >= -60)) {
+        pusher.setLinearVelocity(new THREE.Vector3(0, 0, 0));
+    }
     
 }
 
@@ -368,12 +375,12 @@ function initModels() {
     // Wall left
     var geometry = new THREE.BoxGeometry(10, 20, 200);
     var cube = new Physijs.BoxMesh( geometry, mat, 0);
-    cube.position.set(-57,4,-220);
+    cube.position.set(-57,34,-80);
     scene.add( cube );
 
     // Wall right
     var cube = new Physijs.BoxMesh( geometry, mat, 0);
-    cube.position.set(57,4,-220);
+    cube.position.set(57,34,-80);
     scene.add( cube );
 
     // Wall stopper
@@ -469,7 +476,7 @@ function createCoin(posX=0,posY=0,posZ=0) {
 
         var mass = 1;
         var friction = .4;
-        var restitution = .2; 
+        var restitution = 0; 
 
         // Create mesh for model
         var material = Physijs.createMaterial( 
@@ -493,11 +500,10 @@ function createCoin(posX=0,posY=0,posZ=0) {
         //var angular_amount = 0;
         //coin.setDamping( linear_amount, angular_amount );
         
-        // Collisions
-        coin.addEventListener( 'collision', function(object, rel_vol){
-            
-            if (sfxEnabled) {
-            
+        // Collisions SFX
+        if (enableSound && sfxEnabled) {
+            coin.addEventListener( 'collision', function(object, rel_vol){
+                
                 var volx = Math.abs(rel_vol.x);
                 var voly = Math.abs(rel_vol.y);
                 var volz = Math.abs(rel_vol.z);
@@ -512,10 +518,9 @@ function createCoin(posX=0,posY=0,posZ=0) {
                     sound.play();
 
                 }
-                
-            }
 
-        });
+            });
+        }
 
     });
     
