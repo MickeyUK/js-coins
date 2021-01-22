@@ -234,7 +234,7 @@ function initScene() {
     loader.setTexturePath('textures/');
     
     // Panorama background
-    initPanorama('/textures/arcade.jpg');
+    initPanorama('textures/arcade.jpg');
     
     // Initialize
     initModels();
@@ -276,7 +276,6 @@ function animate() {
 
     // Restrict pusher movement
     var pos = pusher.position.z;
-    console.log(pos);
     if ((!pusherIn && pos >= -60)) {
         pusher.setLinearVelocity(new THREE.Vector3(0, 0, 0));
     }
