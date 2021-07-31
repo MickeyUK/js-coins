@@ -8,4 +8,4 @@ I used a SMAA shader for edge smoothing to improve performance.
 I will continue to add to this example when I have time, but it hopefully will
 be a good starting point for anybody wishing to create their own arcade game.
 
-The game in it's current state can be played [here](https://mickeyuk.com/projects/coins.js).
+The game in it's current state can be played [here](https://mickeyuk.github.io/projects/coins.js).
